@@ -1,4 +1,4 @@
-//**************************************************************************
+  //**************************************************************************
 //-------------- Make Jampa @ João Pessoa - Paraíba - Brazil --------------
 //
 // Version: 1.0
@@ -17,6 +17,7 @@
 //  https://learn.openenergymonitor.org/
 //  https://techtutorialsx.com/2017/04/09/esp8266-connecting-to-mqtt-broker/
 //  https://www.electronicwings.com/nodemcu/nodemcu-adc-with-arduino-ide
+//  https://www.instructables.com/id/Arduino-Timer-Interrupts/
 //  
 //**************************************************************************
 // Steps

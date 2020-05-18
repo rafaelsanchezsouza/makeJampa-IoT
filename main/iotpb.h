@@ -28,20 +28,26 @@
 #include "EmonLib.h"                   // Include Emon Library
 EnergyMonitor emon1;                   // Create an instance
 
+#define emonTxV3
+
 // Update these with values vsuitable for your network.
 
-const char* ssid = "Rareriroru2G";
-const char* password = "INTEGRAL";
+// const char* ssid = "Rareriroru2G";
+// const char* password = "INTEGRAL";
+const char* ssid = "VIVOFIBRA-0CA4";
+const char* password = "EAEA8D0CA4";
 const char* mqtt_server = "54.174.96.185";
 const int mqtt_port = 1883;
 const char* outTopic = "@sensores/sensor1";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-long lastMsg = 0;
+long before = 0;
+long msgSend = 0;
 char msg[50];
 int value = 0;
 int sensor = 0;
+long CurrentMillis, PreviousMillis = 0;
 
 void setup_wifi() {
 
@@ -127,15 +133,25 @@ void loopIoT() {
   client.loop();
 
   long now = millis();
-  if (now - lastMsg > 2000) {
-    lastMsg = now;
+  // double Irms = emon1.calcIrmsPB(200);  // Calculate Irms only
+  
+  if (now - before > 5) {
     ++value;
-//    sensor = analogRead(A0);
-    double Irms = emon1.calcIrms(1480);  // Calculate Irms only
-//        Serial.print("hello cruje #%ld %ld %ld", value, Irms*230, Irms);
-    snprintf (msg, 50, "hello cruje #%ld %ld %ld", value, Irms*230, Irms);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish(outTopic, msg);
+
+    double Irms = emon1.calcIrms(value);  // Calculate Irms only
+    
+    if (now - msgSend > 2000) {
+      msgSend = now;
+      // Serial.print(millis()/1000);
+      Serial.print("s Irms*230 =");
+      Serial.print(Irms*230);
+      Serial.print(" mensagem mqtt: ");
+      // snprintf (msg, 50, "hello cruje #%ld %ld %ld", value, Irms*230, Irms);
+      snprintf (msg, 50, "%ld: Irms = %ld P= %ld", value, Irms, Irms*230);
+      Serial.print("Publish message: ");
+      Serial.println(msg);
+      client.publish(outTopic, msg);
+    }
+    before = now;
   }
 }
