@@ -26,9 +26,16 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include "EmonLib.h"                   // Include Emon Library
+#include <SoftwareSerial.h>
+
+#define D7 13
+#define D8 15
+#define emonTxV3
+
+SoftwareSerial mySerial(D7, D8); // RX = D7, TX  = D8
 EnergyMonitor emon1;                   // Create an instance
 
-#define emonTxV3
+
 
 // Update these with values vsuitable for your network.
 
@@ -48,6 +55,11 @@ double offsetI;                          //Low-pass filter output
 double sqV,sumV,sqI,sumI,instP,sumP;              //sq = squared, sum = Sum, inst = instantaneous
 double filteredI;
 double ICAL;
+
+//Serial Communication
+String inputString = "";         // a String to hold incoming data
+bool stringComplete = false;  // whether the string is complete
+int i = 0;
 
 
 long before = 0;
@@ -125,9 +137,45 @@ void reconnect() {
   }
 }
 
+void receiveString() {
+//  Serial.println("Cruj");
+  while(!stringComplete) {
+        // get the new byte:
+        i++;
+        char inChar = (char)mySerial.read();
+        // add it to the inputString:
+        inputString += inChar;
+        // if the incoming character is a newline, set a flag so the main loop can
+        // do something about it:
+        if (inChar == '\n')
+        {
+            delay(50);
+            stringComplete = true;
+        }
+        delay(50);
+        
+  }
+  if (stringComplete) {
+    //envia mensagem
+    snprintf (msg, 50, "%s",inputString);
+    Serial.print("Publish message: ");
+    Serial.println(msg);
+    client.publish(outTopic, msg);
+
+    // clear the string:
+    inputString = "";
+    stringComplete = false;
+  }
+  delay(50);
+}
+
 void setupIoT() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
   Serial.begin(115200);
+  mySerial.begin(115200); //Start mySerial
+  pinMode(D7,INPUT); //d7 is RX, receiver, so define it as input
+  pinMode(D8,OUTPUT); //d8 is TX, transmitter, so define it as output
+  inputString.reserve(200);
   emon1.current(A0, 80);             // Current: input pin, calibration.
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
@@ -143,38 +191,13 @@ void loopIoT() {
 
   long now = millis();
   // double Irms = emon1.calcIrmsPB(200);  // Calculate Irms only
+
   
-  if (now - before > 5) {
+  
+  if (now - before > 2000) {
     ++value;
-    
-    // Digital low pass filter extracts the 2.5 V or 1.65 V dc offset,
-    //  then subtract this - signal is now centered on 0 counts.
-    sampleI = analogRead(A0);
-    offsetI = (offsetI + (sampleI-offsetI)/1024);
-    filteredI = sampleI - offsetI;
-
-    // Root-mean-square method current
-    // 1) square current values
-    sqI = filteredI * filteredI;
-    // 2) sum
-    sumI += sqI;
-
-    double I_RATIO = ICAL *((SupplyVoltage/1000.0) / (ADC_COUNTS));
-    double Irms = I_RATIO * sqrt(sumI / value);
-    
-    if (now - msgSend > 2000) {
-      msgSend = now;
-      // Serial.print(millis()/1000);
-      Serial.print("s Irms*230 =");
-      Serial.print(Irms*230);
-      Serial.print(" mensagem mqtt: ");
-      // snprintf (msg, 50, "hello cruje #%ld %ld %ld", value, Irms*230, Irms);
-      snprintf (msg, 50, "%ld: Irms = %ld P= %ld", msgNumber++, Irms, Irms*230);
-      Serial.print("Publish message: ");
-      Serial.println(msg);
-      client.publish(outTopic, msg);
-      sumI = 0;
-    }
+    receiveString()
     before = now;
   }
 }
+
