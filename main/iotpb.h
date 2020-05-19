@@ -42,10 +42,19 @@ const char* outTopic = "@sensores/sensor1";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+int SupplyVoltage=3300;
+int sampleI;
+double offsetI;                          //Low-pass filter output
+double sqV,sumV,sqI,sumI,instP,sumP;              //sq = squared, sum = Sum, inst = instantaneous
+double filteredI;
+double ICAL;
+
+
 long before = 0;
 long msgSend = 0;
 char msg[50];
 int value = 0;
+int msgNumber = 0;
 int sensor = 0;
 long CurrentMillis, PreviousMillis = 0;
 
@@ -119,7 +128,7 @@ void reconnect() {
 void setupIoT() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
   Serial.begin(115200);
-  emon1.current(A0, 111.1);             // Current: input pin, calibration.
+  emon1.current(A0, 80);             // Current: input pin, calibration.
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
@@ -137,8 +146,21 @@ void loopIoT() {
   
   if (now - before > 5) {
     ++value;
+    
+    // Digital low pass filter extracts the 2.5 V or 1.65 V dc offset,
+    //  then subtract this - signal is now centered on 0 counts.
+    sampleI = analogRead(A0);
+    offsetI = (offsetI + (sampleI-offsetI)/1024);
+    filteredI = sampleI - offsetI;
 
-    double Irms = emon1.calcIrms(value);  // Calculate Irms only
+    // Root-mean-square method current
+    // 1) square current values
+    sqI = filteredI * filteredI;
+    // 2) sum
+    sumI += sqI;
+
+    double I_RATIO = ICAL *((SupplyVoltage/1000.0) / (ADC_COUNTS));
+    double Irms = I_RATIO * sqrt(sumI / value);
     
     if (now - msgSend > 2000) {
       msgSend = now;
@@ -147,10 +169,11 @@ void loopIoT() {
       Serial.print(Irms*230);
       Serial.print(" mensagem mqtt: ");
       // snprintf (msg, 50, "hello cruje #%ld %ld %ld", value, Irms*230, Irms);
-      snprintf (msg, 50, "%ld: Irms = %ld P= %ld", value, Irms, Irms*230);
+      snprintf (msg, 50, "%ld: Irms = %ld P= %ld", msgNumber++, Irms, Irms*230);
       Serial.print("Publish message: ");
       Serial.println(msg);
       client.publish(outTopic, msg);
+      sumI = 0;
     }
     before = now;
   }
