@@ -17,6 +17,7 @@
   Please consider buying products from ACROBOTIC to help fund future
   Open-Source projects like this! We'll always put our best effort in every
   project, and release all our design files and code for you to use. 
+
   https://acrobotic.com/
   https://amazon.com/acrobotic
   ------------------------------------------------------------------------------
@@ -26,35 +27,23 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
-#include <SoftwareSerial.h>
-
-#define D7 13
-#define D8 15
-
-SoftwareSerial mySerial(D7, D8); // RX = D7, TX  = D8
 
 ESP8266WebServer server;
-char* ssid = "Rareriroru2G";
-char* password = "INTEGRAL";
-
-// char* ssid = "VIVOFIBRA-0CA4";
-// char* password = "EAEA8D0CA4";
+char* ssid = "YOUR_SSID";
+char* password = "YOUR_PASSWORD";
 
 void setup()
 {
-  WiFi.begin(ssid,password);
-  Serial.begin(9600);  
-  mySerial.begin(9600); //Start mySerial
-  pinMode(D7,INPUT); //d7 is RX, receiver, so define it as input
-  pinMode(D8,OUTPUT); //d8 is TX, transmitter, so define it as output
-  while(WiFi.status()!=WL_CONNECTED)
-  {
-    mySerial.print(".");
-    delay(500);
-  }
-  Serial.println("");
+  // WiFi.begin(ssid,password);
+  Serial.begin(9600);
+  // while(WiFi.status()!=WL_CONNECTED)
+  // {
+  //   Serial.print(".");
+  //   delay(500);
+  // }
+  // Serial.println("");
   Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
+  // Serial.println(WiFi.localIP());
 
   // server.on("/",handleIndex);
   // server.begin();
@@ -63,33 +52,22 @@ void setup()
 void loop()
 {
   // Send a JSON-formatted request with key "type" and value "request"
-  // then parse the JSON-formatted response with keys "gas" and "Irms"
+  // then parse the JSON-formatted response with keys "gas" and "distance"
   DynamicJsonDocument doc(1024);
-  double Irms = 0;
+  // double gas = 0, distance = 0;
   // Sending the request
   doc["type"] = "request";
-  serializeJson(doc,mySerial);
+  serializeJson(doc,Serial);
   // Reading the response
   boolean messageReady = false;
   String message = "";
   while(messageReady == false) { // blocking but that's ok
-    if(mySerial.available()) {
-      message = mySerial.readString();
+    delay(10);
+    if(Serial.available()) {
+      message = Serial.readString();
       messageReady = true;
     }
   }
-  // Attempt to deserialize the JSON-formatted message
-  DeserializationError error = deserializeJson(doc,message);
-  if(error) {
-    Serial.print(F("deserializeJson() failed: "));
-    Serial.println(error.c_str());
-    return;
-  }
-  Irms = doc["Irms"];
-  // gas = doc["gas"];
-  // Prepare the data for serving it over HTTP
-  String output = "Irms: " + String(Irms) + "\n";
-  // output += "CO level: " + String(gas);
-  // Serve the data as plain text, for example
-  Serial.print(output);
+  Serial.print(message);
+
 }
