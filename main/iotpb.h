@@ -152,13 +152,15 @@ void setupIoT() {
 
 void loopIoT() {
 
+  // delay(500);
   if (!client.connected()) {
     reconnect();
   }
   client.loop();
 
-  doc["type"] = "request";
-  serializeJson(doc,Serial);
+  // doc["type"] = "request";
+  // serializeJson(doc,Serial);
+  Serial.write("{ Request Message }");
   // Reading the response
   boolean messageReady = false;
   String message = "";
@@ -172,6 +174,8 @@ void loopIoT() {
     }
     i++;
   }
+  // Serial.print("Debug Mensagem: ");
+  // Serial.println(message);
   message.toCharArray(msg2,50);
   snprintf (msg, 50, msg2);
   Serial.print("Publish message: ");
