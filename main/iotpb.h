@@ -27,20 +27,21 @@
 #include <PubSubClient.h>
 #include "EmonLib.h"                   // Include Emon Library
 #include <SoftwareSerial.h>
+#include <ArduinoJson.h>
 
 #define D7 13
 #define D8 15
 #define emonTxV3
 
-SoftwareSerial mySerial(D7, D8); // RX = D7, TX  = D8
+// SoftwareSerial mySerial(D7, D8); // RX = D7, TX  = D8
 EnergyMonitor emon1;                   // Create an instance
 
 // Update these with values vsuitable for your network.
 
-// const char* ssid = "Rareriroru2G";
-// const char* password = "INTEGRAL";
-const char* ssid = "VIVOFIBRA-0CA4";
-const char* password = "EAEA8D0CA4";
+const char* ssid = "Rareriroru2G";
+const char* password = "INTEGRAL";
+// const char* ssid = "VIVOFIBRA-0CA4";
+// const char* password = "EAEA8D0CA4";
 const char* mqtt_server = "54.174.96.185";
 const int mqtt_port = 1883;
 const char* outTopic = "@sensores/sensor1";
@@ -55,14 +56,15 @@ double filteredI;
 double ICAL;
 
 //Serial Communication
-String inputString = "";         // a String to hold incoming data
+char inputChar = 0;         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
 int i = 0;
-
+DynamicJsonDocument doc(1024);
 
 long before = 0;
 long msgSend = 0;
 char msg[50];
+char msg2[50];
 int value = 0;
 int msgNumber = 0;
 int sensor = 0;
@@ -135,45 +137,13 @@ void reconnect() {
   }
 }
 
-void receiveString() {
-//  Serial.println("Cruj");
-  while(!stringComplete) {
-        // get the new byte:
-        i++;
-        char inChar = (char)mySerial.read();
-        // add it to the inputString:
-        inputString += inChar;
-        // if the incoming character is a newline, set a flag so the main loop can
-        // do something about it:
-        if (inChar == '\n')
-        {
-            delay(50);
-            stringComplete = true;
-        }
-        delay(50);
-        
-  }
-  if (stringComplete) {
-    //envia mensagem
-    snprintf (msg, 50, "%s",inputString);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish(outTopic, msg);
-
-    // clear the string:
-    inputString = "";
-    stringComplete = false;
-  }
-  delay(50);
-}
-
 void setupIoT() {
-  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-  Serial.begin(115200);
-  mySerial.begin(115200); //Start mySerial
-  pinMode(D7,INPUT); //d7 is RX, receiver, so define it as input
-  pinMode(D8,OUTPUT); //d8 is TX, transmitter, so define it as output
-  inputString.reserve(200);
+  // pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  Serial.begin(9600);
+  // mySerial.begin(115200); //Start mySerial
+  // pinMode(D7,INPUT); //d7 is RX, receiver, so define it as input
+  // pinMode(D8,OUTPUT); //d8 is TX, transmitter, so define it as output
+  // inputChar.reserve(200);
   emon1.current(A0, 80);             // Current: input pin, calibration.
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
@@ -187,15 +157,27 @@ void loopIoT() {
   }
   client.loop();
 
-  long now = millis();
-  // double Irms = emon1.calcIrmsPB(200);  // Calculate Irms only
-
-  
-  
-  if (now - before > 2000) {
-    ++value;
-    receiveString()
-    before = now;
+  doc["type"] = "request";
+  serializeJson(doc,Serial);
+  // Reading the response
+  boolean messageReady = false;
+  String message = "";
+  inputChar = 0;
+  int i = 0;
+  while(messageReady == false) { // blocking but that's ok
+    delay(10);
+    if(Serial.available()) {
+      message = Serial.readString();
+      messageReady = true;
+    }
+    i++;
   }
+  message.toCharArray(msg2,50);
+  snprintf (msg, 50, msg2);
+  Serial.print("Publish message: ");
+  Serial.println(msg);
+  client.publish(outTopic, msg);
+  // Serial.print(msg2);
+
 }
 
