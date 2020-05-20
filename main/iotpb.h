@@ -35,8 +35,6 @@
 SoftwareSerial mySerial(D7, D8); // RX = D7, TX  = D8
 EnergyMonitor emon1;                   // Create an instance
 
-
-
 // Update these with values vsuitable for your network.
 
 // const char* ssid = "Rareriroru2G";

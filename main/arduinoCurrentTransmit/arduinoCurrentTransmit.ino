@@ -18,10 +18,10 @@ void loop() {
   double Irms = emon1.calcIrms(1500);  // Calculate Irms only
 
 //  String message = ("Cruj Cruj I = %ld A, P = %ld W", Irms, Irms*230);
-  mySerial.print("P = ");
-  mySerial.print(Irms*230);
-  mySerial.print("W");
-  mySerial.print("\n");
+  mySerial.write("P = ");
+  mySerial.write(mySerial.print(Irms*230));
+  mySerial.write("W");
+  mySerial.write("\n");
   
   delay(20); // Wait for a sec.
 
